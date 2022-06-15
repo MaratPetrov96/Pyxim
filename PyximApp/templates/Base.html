@@ -1,0 +1,28 @@
+<html>
+<head>
+//<link href='/static/Style.css' rel='stylesheet'>
+<title>
+{{title}}
+</title>
+</head>
+<body>
+<div class='header'>
+PYXIMONLINE
+</div>
+<div class='main'>
+<div class='categories'>
+{% for c in categories %}
+<a href={ 'category' c.link }></a>
+{% endfor %}
+</div>
+<div class='fresh'>
+{% for i in fresh %}
+{% endfor %}
+</div>
+<div class='content'>
+{% block main %}
+{% endblock %}
+</div>
+</div>
+</body>
+</html>
