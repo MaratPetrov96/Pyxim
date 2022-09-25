@@ -1,0 +1,133 @@
+body{
+margin:0px;
+}
+.review-title{
+display:inline-block;
+width:304px;
+height:276px;
+position:relative;
+}
+.review-title *{
+display:block;
+}
+.review{
+display:inline-block;
+margin-left:15px;
+margin-right:15px;
+margin-bottom:150px;
+margin-top:10px;
+width:350px;
+left:50px;
+position:relative;
+float:left;
+text-decoration:none;
+}
+.review *{
+display:block;
+}
+.review span{
+margin-top:20px;
+}
+.preview-title{
+width:246px;
+position:absolute;
+font-size:16px;
+text-decoration:none;
+color:#000000;
+font-family:"Nunito Sans",sans-serif;
+font-weight: 700;
+line-height: 20px;
+}
+.record-title{
+position:absolute;
+font-size:28px;
+color:#000000;
+}
+.image{
+margin-bottom:200px;
+}
+.content{
+margin-left:115px;
+margin-right:115px;
+font-family:"Nunito Sans",sans-serif;
+}
+.title{
+color:black;
+font-size:30px;
+}
+nav{
+position:fixed;
+background-color:white;
+z-index:500;
+width:100%;
+height:60px;
+}
+nav a{
+font-size:24px;
+overflow:auto;
+}
+.nav_center{
+top:16px;
+position:relative;
+}
+nav div{
+display:inline;
+}
+nav a{
+margin-left:15px;
+margin-right:15px;
+color:#000000;
+text-decoration:none;
+line-height: 24px;
+height: 56px;
+font-weight: 900;
+text-transform: uppercase;
+}
+.main{
+padding-top:100px;
+}
+.category{
+font-family: "Nunito Sans",sans-serif;
+font-size: 16px;
+line-height: 20px;
+font-weight: 900;
+text-transform: uppercase;
+color: #ba0009;
+letter-spacing: 1px;
+}
+.header a{
+	font-size:27px;
+}
+#comment{
+width:638px;
+height:88px;
+}
+#tags-title{
+	color: #000;
+	line-height: 24px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-family: "Nunito Sans",sans-serif;
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+#tags a{
+    text-decoration: none;
+    color: #000;
+    font-family: "Nunito Sans",sans-serif;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: normal;
+	margin-right: 16px;
+}
+.element{
+display:inline-block;
+position:relative;
+}
+#btn{
+margin-top:100px;
+}

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+Новая запись
+</title>
+<style type='text/css'>
+input{
+display:block;
+}
+.block_{
+display:inline-block;
+}
+.block_ *{
+display:block;
+}
+.editor{
+font-family: "Nunito Sans",sans-serif;
+font-size: 18px;
+line-height: 24px;
+font-weight: normal;
+margin-bottom: 24px;
+border:solid;
+}
+.editor::after{
+    content: attr(data-placeholder)!important;
+    white-space: pre;
+    color: var(--color-black-700);
+    pointer-events: none;
+}
+</style>
+<script>
+var count = 0;
+</script>
+<script>
+function enterToBr(e){
+    var evt = e || window.event;
+    var keyCode = evt.charCode || evt.keyCode;
+    if(keyCode==13){
+            //document.execCommand('insertHTML', false, '<br/>');
+            //evt.preventDefault();
+			this.submit();
+			return false;
+    }
+}
+</script>
+<script>
+function remove(elem){
+document.getElementById(elem.getAttribute('class')).remove();
+elem.remove();
+count -= 1;
+}
+</script>
+<script>
+function upload(elem){
+var image = document.createElement('img');
+var blob = window.URL.createObjectURL(elem.files[0]);
+
+image.setAttribute('src',blob);
+image.setAttribute('class','picture');
+image.height = 480;
+image.setAttribute('name','picture');
+image.width = 539;
+var div_ = elem.closest('.img_div');
+insertAfter(elem,image);
+elem.style = 'display:none;';
+  }
+ function addButton(){
+ var button = document.createElement('button');
+ var del = document.getElementById('del');
+ button.textContent = 'Удалить';
+button.setAttribute('onclick','remove(this)');
+button.setAttribute('id','elem'+count);
+document.getElementById('del').appendChild(button);
+return button;
+ }
+function add_image() {
+var divImage = document.createElement('div');
+var del = document.getElementById('del');
+divImage.setAttribute('id','elem'+count);
+addButton();
+count += 1;
+divImage.setAttribute('class','img_div');
+	var main = document.getElementById('main');
+	var im = document.createElement('input');
+	var sign = document.createElement('input');
+	im.name = 'img';
+	im.type = 'file';
+	sign.type = 'text';
+	sign.name = 'descr';
+	im.setAttribute('onchange','upload(this)');
+	divImage.appendChild(im);
+	divImage.appendChild(sign);
+	main.insertBefore(divImage, document.getElementById("block"));
+}
+</script>
+<script>
+function send() {
+document.getElementById("block").remove();
+document.getElementById('data').innerHTML = document.getElementById("main").innerHTML;
+}
+</script>
+<script>
+function add_text(){
+var divText = document.createElement('div');
+var del = document.getElementById('del');
+divText.setAttribute('id','elem'+count);
+addButton();
+count += 1;
+divText.setAttribute('style','margin-top:10px;');
+divText.setAttribute('class','editor');
+divText.setAttribute('contenteditable','true');
+divText.setAttribute('data-placeholder','Введите текст');
+divText.setAttribute('onkeydown','return enterToBr()');
+divText.appendChild(document.createElement('br'));
+main.insertBefore(divText, block);
+}
+</script>
+<script>
+function insertAfter(referenceNode, newNode) {
+  referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+}
+</script>
+<script>
+function add_tag(){
+var hidden = document.getElementById('tags_id');
+var sel = document.getElementById('select_tag').selectedIndex;
+var tag_field = document.getElementById('tags');
+var elem = document.createElement('li');
+if (sel > 0 && !hidden.value.includes('-'+sel+'-') && tag_field.childElementCount<5) {
+hidden.value += sel+'-';
+elem.textContent = document.getElementById('select_tag').options[sel].text;
+elem.setAttribute('class','added_tag');
+elem.setAttribute('name',sel);
+elem.setAttribute('onclick','remove_tag(this)');
+tag_field.appendChild(elem);
+}
+}
+function remove_tag(elem){
+var hidden = document.getElementById('tags_id');
+var txt = hidden.value;
+hidden.value = txt.replace('-'+elem.attributes['name'].value+'-','-');
+elem.remove();
+}
+</script>
+</head>
+<body onload = "add_text()">
+<div class='block_' id='del'>
+</div>
+<form id='form_' action='{% url "add" %}' method='POST' enctype='multipart/form-data' class='block_'>
+{% csrf_token %}
+<select name='category'>
+{% for cat in categories %}
+<option value={{cat.pk}}>{{cat.title}}</option>
+{% endfor %}
+</select>
+<div>
+<select id='select_tag'>
+<option value=''>-------</option>
+{% for i in tags %}
+<option value={{i.pk}}>{{i.title}}</option>
+{% endfor %}
+</select>
+<ul id='tags'>
+{% for t in one.tags.all %}
+<li class='added_tag' name='{{t.pk}}' onclick='remove_tag(this)'>{{t.title}}</li>
+{% endfor %}
+</ul>
+<input type='hidden' name='tags_id' id ='tags_id' value='-'>
+</div>
+<input type='text' name='title'>
+<textarea name='text' id='data' style='display:none;'></textarea>
+<button onclick="send()" type='submit'>Отправить</button>
+<div id='main' style='margin-top:50px;border:3px solid black;width:700px;height:400px;font-size:20px;'>
+<div class='block_' id = "block">
+<span id="add_" onclick="add_tag()">Добавить тег</span>
+<span onclick='add_image()'>Добавить картинку</span>
+<span onclick='add_text()'>Добавить текст</span>
+</div>
+</div>
+</form>
+</body>
+</html>

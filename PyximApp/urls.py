@@ -4,11 +4,11 @@ from . import views
 urlpatterns = [
     path('',views.main),
     path('<str:link>-id<int:pk>',views.RecordView.as_view(),name='record'),
-    path('publish',views.publish),
-    path('<str:cat>',views.CategoryView.as_view(),name='category'),
-    path('<str:cat>/?pg=<int:pg>',views.CategoryView.as_view(),name='category'),
-    path('<str:tag>',views.CategoryView.as_view(),name='tag'),
-    path('<str:tag>/?pg=<int:pg>',views.CategoryView.as_view(),name='tag')
+    path('add',views.add,name='add'),
+    path('categories/<str:cat>',views.CategoryView.as_view(),name='category'),
+    path('categories/<str:cat>/?pg=<int:pg>',views.CategoryView.as_view(),name='category'),
+    path('tags/<str:tag>',views.TagView.as_view(),name='tag'),
+    path('tags/<str:tag>/?pg=<int:pg>',views.TagView.as_view(),name='tag'),
+    path('<int:pk>/comment',views.comment,name='comment'),
+    path('#',views.load_more,name='load')
     ]
-
-handler404 = "mysite.views.page_not_found_view"

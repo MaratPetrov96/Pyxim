@@ -1,0 +1,67 @@
+{% extends 'Base.html' %}
+{% block main %}
+<div class='title'>
+{{record.title}}
+</div>
+{% autoescape off %}
+{{content | linebreaks}}
+{% endautoescape %}
+<p>Автор: {{record.author.username}}</p>
+<div id='tags'>
+<p id='tags-title'>Теги
+<p>
+{% for t in record.tags.all %}
+<span><a href = '{% url "tag" t.link %}'>{{t.title}}</a></span>
+{% endfor %}</p>
+</p>
+</div>
+<form method='POST' action='{% url "comment" record.pk %}' id='form' align='left'>
+{% csrf_token %}
+<div>
+<span align='left'>
+{% if not user.is_authenticated %}
+Гость
+{% else %}
+{{user.username}}
+{% endif %}
+</span>
+</div>
+<textarea name='text' maxlength='20000' id='comment'></textarea>
+<div>
+<input type='submit' value='Отправить'>
+{% if not user.is_authenticated %}
+<span>под именем</span>
+<input type='text' name='username' placeholder='Гость'>
+{% endif %}
+</div>
+</form>
+<div>
+<span>Комментарии {{ record.comms.all | length }}</span>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script>
+      $(document).ready(function () {
+          // отслеживаем событие отправки формы
+          $('#form').submit(function () {
+              // создаем AJAX-вызов
+              $.ajax({
+                  data: $(this).serialize(), // получаем данные формы
+                  type: $(this).attr('method'), // GET или POST
+                  url: "{% url 'comment' record.pk %}",
+                  // если успешно, то
+                  success: function (response) {
+					$('#form').remove();
+                      alert("Товар "+"{{one.title}}"+" добавлен в корзину");
+                  },
+                  // если ошибка, то
+                  error: function (response) {
+                      // предупредим об ошибке
+                      alert(response.responseJSON.errors);
+                      console.log(response.responseJSON.errors)
+                  }
+              });
+              return false;
+          });
+      })
+  </script>
+{% endblock %}
