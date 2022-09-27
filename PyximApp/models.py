@@ -55,6 +55,7 @@ class Comment(models.Model):
     content = models.TextField()
     user = models.ForeignKey(User,related_name='comms',null=True,
                              blank=True,on_delete=models.CASCADE)
+    record = models.ForeignKey(Record,related_name='comms',on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True)
     parent = models.ForeignKey('self',on_delete=models.CASCADE
                                 ,null=True,blank=True,related_name='replies')
