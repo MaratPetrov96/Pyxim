@@ -35,12 +35,24 @@
 {% endif %}
 </div>
 </form>
-<div>
+<div id='comms'>
 <span>Комментарии {{ record.comms.all | length }}</span>
+{% for c in record.comms.all %}
+<div class='comment' align='left'>
+<div>
+<span class='username'>{{c.username}}</span>
+<span class='comm-date'>{{c.date.time | time:"H:i"}} {{c.date.date | date:"d.m.y"}}</span>
+</div>
+<div class='comm-content'>
+{{c.content | linebreaks}}
+</div>
+</div>
+{% endfor %}
 </div>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script>
       $(document).ready(function () {
+		const comm = document.getElementById("comms");
           // отслеживаем событие отправки формы
           $('#form').submit(function () {
               // создаем AJAX-вызов
@@ -50,15 +62,28 @@
                   url: "{% url 'comment' record.pk %}",
                   // если успешно, то
                   success: function (response) {
-					$('#form').remove();
-                      alert("Товар "+"{{one.title}}"+" добавлен в корзину");
+				  date = new Date(response[0].fields.date);
+				  console.dir(date);
+				  var comm_day = date.toLocaleDateString();
+				  var comm_hour = date.getHours();
+				  var comm_minute = date.getMinutes();
+				  if (comm_minute<10){
+				  comm_minute = "0" + comm_minute;
+				  }
+				  var comm_main = document.createElement("div");
+				  comm_main.setAttribute('class','comment');
+				  comm_main.setAttribute('align','left');
+				  var comm_date = document.createElement("div");
+				  comm_date.innerHTML += "<span class='username'>"+response[0].fields.username+'</span>';
+				  comm_date.innerHTML += "<span class='comm-date'>"+`${comm_hour}:${comm_minute} ${comm_day}`+'</span>';
+				  var comm_content = document.createElement("div");
+				  comm_content.setAttribute('class','comm-content');
+				  var content = '<p>'+response[0].fields.content.replace('\r\n','</p><p>')+'</p>';
+				  comm_content.innerHTML += content;
+				  comm_main.appendChild(comm_date);
+				  comm_main.appendChild(comm_content);
+				  comm.appendChild(comm_main);
                   },
-                  // если ошибка, то
-                  error: function (response) {
-                      // предупредим об ошибке
-                      alert(response.responseJSON.errors);
-                      console.log(response.responseJSON.errors)
-                  }
               });
               return false;
           });

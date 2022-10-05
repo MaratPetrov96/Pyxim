@@ -9,16 +9,9 @@
 </a>
 {% endfor %}
 </div>
-<div class="element" id="btn" align='center'>
-            <button type="button" class="btn btn-success" onclick='loadmorePost()'>Load More Post</button>
-        </div>
+            <button type="button" class="element" onclick='loadmorePost()' id='button'>ЗАГРУЗИТЬ ЕЩЁ</button>
 <script>
-    // var _current_item = $('.single_content').length
-    // console.log(_current_item);
-    const loadBtn = document.getElementById('btn');
-    //const spinner = document.getElementById('spinner');
-    //const total = JSON.parse(document.getElementById('json-total').textContent);
-    //const alert = document.getElementById('alert');
+    const loadBtn = document.getElementById('button');
 
     function loadmorePost() {
 		var elements = document.getElementsByClassName('content');
@@ -31,34 +24,21 @@
             data: {
                  'loaded_item': _current_item
              },
-            //beforeSend: function () {
-				//loadBtn.classList.add('not-visible');
-                //spinner.classList.remove('not-visible');
-					//},
             success: function (response) {
                 const data = response.posts;
-				if (data)
-                //spinner.classList.add('not-visible')
+				console.log(data);
                 data.map(post => {
-					//var link = "${requiredElement.href.replace(,)}";
 					var link = `/<${post.link}>-id${post.id}`;
 					var prev = `${post.photo}`;
                     content_container.innerHTML += `<a href='${link}' class='review'><img src='${prev}' width='350' height='356'>`+
 														`<span class='category'>${post.category}</span>`+`<span class='record-title' align='center'>${post.title}</span></a>`;
                     });
-                    //if (_current_item == total) {
-                        //alert.classList.remove('not-visible');
-                    //} else {
-                        //loadBtn.classList.remove('not-visible');
-                    //}
-                },
-                error: function (err) {
-                    console.log(err);
-                },
-            });
+                    if (response.index == false) {
+                        loadBtn.remove();
+                    }
+            }
         }
-        //loadBtn.addEventListener('click', () => {
-            //loadmorePost()
-        //});
+        );
+}			
     </script>
 {% endblock %}

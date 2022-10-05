@@ -10,6 +10,9 @@ from django.contrib.auth import login, authenticate,logout
 from django.core.files.storage import FileSystemStorage
 from .models import *
 from django.http import JsonResponse
+from rest_framework import serializers
+from django.core import serializers
+from django.contrib.auth.forms import UserCreationForm,AuthenticationForm
 
 width = 560 #ширина картинок в записях
 height = 500 #высота картинок в записях
@@ -28,19 +31,27 @@ def pyxim(request,template,data): #шаблонизация
     data['fresh'] = fresh()
     data['categories'] = Category.objects.all()
     data['user'] = request.user
+    data['sign_form'] = UserCreationForm
+    data['login_form'] = AuthenticationForm
     return render(request,template,data)
 
 def load_more(request):
     loaded_item = int(request.GET.get('loaded_item'))
-    limit = 2
+    limit = 3
     all_ = Record.objects.all().order_by('-date')
     params = [(i.photos.first().file.url,i.category.title) for i in list(all_)[loaded_item:loaded_item+limit]]
     post_obj = list(all_.values()[loaded_item:loaded_item+limit])
+    try:
+        all_[loaded_item+limit]
+    except IndexError:
+        index = False
+    else:
+        index = True
     for n,p in enumerate(post_obj):
         post_obj[n]['photo'] = params[n][0]
         post_obj[n]['category'] = params[n][1]
     #post_obj = list(Record.objects.all().order_by('-date'))[loaded_item:loaded_item+limit]
-    data = {'posts': post_obj}
+    data = {'posts': post_obj,'index':index}
     #data['images'] = [post.photos.first.file.url for post in data['posts']]
     return JsonResponse(data=data)
 
@@ -54,34 +65,36 @@ def handler404(request,exception):
 
 @login_required
 def add(request): #добавление записи
-    if request.method == 'POST':
-        text = request.POST['text']
-        title = request.POST['title']
-        tags = request.POST['tags_id']
-        imgs = bs(request.POST['text'],'html.parser').findAll(class_='picture') #картинки
-        new = Record(title=title,link=slugify(title),content=text,
-                     category=Category.objects.get(pk=request.POST['category']),
-                     author=request.user)
-        new.save()
-        for count,i in enumerate(request.FILES.getlist('img')):
-            file = Photo(file=i,record=new,description=request.POST.getlist('descr')[count])
-            file.save()
-            attrs = imgs[count].attrs
-            attrs['class'] = attrs['class'][0]
-            blob = sorted(attrs.items()) #сортируем атрибуты, так как в html онм могут быть в любом порядке
-            blob = '<img '+' '.join([f'{k}="{v}"' for k,v in attrs.items()])+'>'
-            text = text.replace('<input name="img" type="file" onchange="upload(this)" style="display: none;">'
-                              ,f'<img src>',1).replace(
-                                  '<input type="text" name="descr">'
-                                  ,'',1#вставляем код для изображений
-                                  ).replace(blob,'')
-        new.content = text
-        new.save()
-        if tags.split('-')[1:-1]:
-            for i in tags.split('-')[1:-1]:
-                new.tags.add(Tag.objects.get(pk=int(i)))
-        return redirect('record',link=new.link,pk=new.pk)
-    return pyxim(request,'NewRecord.html',{'tags':Tag.objects.all()})
+    if request.user.is_superuser:
+        if request.method == 'POST':
+            text = request.POST['text']
+            title = request.POST['title']
+            tags = request.POST['tags_id']
+            imgs = bs(request.POST['text'],'html.parser').findAll(class_='picture') #картинки
+            new = Record(title=title,link=slugify(title),content=text,
+                         category=Category.objects.get(pk=request.POST['category']),
+                         author=request.user)
+            new.save()
+            for count,i in enumerate(request.FILES.getlist('img')):
+                file = Photo(file=i,record=new,description=request.POST.getlist('descr')[count])
+                file.save()
+                attrs = imgs[count].attrs
+                attrs['class'] = attrs['class'][0]
+                blob = sorted(attrs.items()) #сортируем атрибуты, так как в html онм могут быть в любом порядке
+                blob = '<img '+' '.join([f'{k}="{v}"' for k,v in attrs.items()])+'>'
+                text = text.replace('<input name="img" type="file" onchange="upload(this)" style="display: none;">'
+                                  ,f'<img src>',1).replace(
+                                      '<input type="text" name="descr">'
+                                      ,'',1#вставляем код для изображений
+                                      ).replace(blob,'')
+            new.content = text
+            new.save()
+            if tags.split('-')[1:-1]:
+                for i in tags.split('-')[1:-1]:
+                    new.tags.add(Tag.objects.get(pk=int(i)))
+            return redirect('record',link=new.link,pk=new.pk)
+        return pyxim(request,'NewRecord.html',{'tags':Tag.objects.all()})
+    raise Http404
 
 class RecordView(DetailView):
     model = Record
@@ -116,6 +129,7 @@ class TagView(DetailView):
         context['categories'] = Category.objects.all()
         context['title'] = self.object.title
         context['fresh'] = fresh()
+        context['user'] = self.request.user
         return context
 
     def get_object(self, **kwargs):
@@ -133,18 +147,53 @@ class CategoryView(DetailView):
         context['categories'] = Category.objects.all()
         context['title'] = self.object.title
         context['fresh'] = fresh()
+        context['user'] = self.request.user
         return context
 
     def get_object(self, **kwargs):
         return self.model.objects.get(link=self.kwargs['cat'])
 
-def login(request):
-    return render(request,'Login.html')
+def sign(request): #авторизация/authorization
+    if request.method == 'POST':
+        #form = UserCreationForm(request.POST)
+        #if form.is_valid():
+        #form.save()
+        #username = form.cleaned_data.get('username')
+        username = request.POST['username']
+        #raw_password = form.cleaned_data.get('password')
+        password = request.POST['password']
+        email = request.POST['email']
+        User.objects.create_user(username=username, password=password, email=email)
+        user = authenticate(username=username, password=password)
+        login(request,user)
+        return redirect('main')
+    form = UserCreationForm()
+    return render(request, 'Sign.html', {'title':'Authorization','sign':form})
 
-def comment(request):
-    com = Comment(content=request.POST['text'])
+def Login(request): #аутентификация/authentication
+    if request.method == 'POST':
+        username=request.POST.get('username')
+        password=request.POST.get('password')
+        user=authenticate(username=username, password=password)
+        if user:
+            login(request,user)
+            return redirect('main')
+    return redirect('main')
+
+def Logout(request):
+    logout(request)
+    return redirect('main')
+
+def comment(request,pk):
+    com = Comment(content=request.POST['text'],record=Record.objects.get(pk=pk))
     if request.user.is_authenticated:
         com.user = request.user
+        com.username = request.user.username
     else:
-        com.username = request.POST['username']
+        com.username = 'Гость'
+        if request.POST['username']:
+            com.username = request.POST['username']
     com.save()
+    user_json = serializers.serialize("json", [com])
+    #user_json = serializers.serialize("json", [Comment.objects.get(pk=1)])
+    return HttpResponse(user_json, content_type='application/json')

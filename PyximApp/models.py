@@ -3,11 +3,6 @@ import os
 from django.conf import settings
 from django.contrib.auth.models import User
 
-def get_file_path(instance, filename):
-    ext = filename.split('.')[-1]
-    filename = "%s.%s" % (uuid.uuid4(), ext)
-    return os.path.join(instance.directory_string_var, filename)
-
 class Category(models.Model):
     title = models.CharField(max_length=50)
     link = models.CharField(max_length=50)

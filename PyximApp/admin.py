@@ -22,3 +22,7 @@ try:
         exclude = ('tags',)
 except:
     pass
+
+class PersonAdmin(admin.ModelAdmin):
+    list_filter = ('username', 'date')
+admin.site.register(Comment,PersonAdmin)

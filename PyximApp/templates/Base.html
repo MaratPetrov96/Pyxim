@@ -5,6 +5,10 @@
 <title>
 {{title}}
 </title>
+<script>
+const mail_input = '<p id="mail"><label for="id_email">Email:</label>'+
+'<input type="text" name="email" autofocus="" autocapitalize="none" autocomplete="email" maxlength="150" required="" id="id_email"></p>';
+</script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"
         integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN"
@@ -12,19 +16,71 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"
         integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV"
         crossorigin="anonymous"></script>
+<script>
+function log(){
+var form_ = document.getElementById('form');
+var mail = document.getElementById('mail');
+if (form_.hidden == true){
+form_.hidden = false;
+document.getElementById("submit").setAttribute('value','Вход');
+form_.setAttribute('action',"{% url 'login' %}");
+if (mail.hidden == false){
+mail.removeAttribute("required");
+mail.hidden = true;
+}
+}
+else{
+form_.hidden = true;
+}
+}
+function sign(){
+var form_ = document.getElementById('form');
+var mail = document.getElementById('mail');
+if (form_.hidden == true){
+form_.hidden = false;
+document.getElementById("submit").setAttribute('value','Регистрация');
+form_.setAttribute('action',"{% url 'sign' %}");
+if (mail.hidden == true){
+mail.setAttribute('required','');
+mail.hidden = false;
+}
+}
+else{
+form_.hidden = true;
+}
+}
+</script>
 </head>
 <body>
 <div id='app'>
-<nav align='center'>
+<nav align='center' id='nav'>
 <div class='nav_center'>
 <div class='header'>
 <a href='/' title='PYXIM'>PYXIM</a>
 </div>
 <div class='categories'>
 {% for c in categories %}
-<a href={% url 'category' c.link %}>{{c.title}}</a>
+<a href={% url 'category' c.link %} class='catg'>{{c.title}}</a>
 {% endfor %}
 </div>
+{% if user.is_authenticated %}
+<span>{{user.username}}</span>
+<a href="{% url 'logout' %}" id='logout' align='right'>Выход</a>
+{% else %}
+<span onclick="log()">Вход</span>
+<span onclick="sign()">Регистрация</span>
+{% endif %}
+</div>
+<div align="center">
+<form id="form" class='form' method="POST" hidden>
+{% csrf_token %}
+{{login_form.as_p}}
+<p id='mail'>
+<label for="id_email">Email:</label>
+<input type="email" name="email" autofocus="" autocapitalize="none" autocomplete="email" maxlength="150" id="id_email">
+</p>
+<input type='submit' value='Вход' id='submit'>
+</form>
 </div>
 </nav>
 <div class='main' align='center'>
@@ -41,6 +97,9 @@
 <div class='content'>
 {% block main %}
 {% endblock %}
+<div id='bottom_'>
+<span>PYXIM</span>
+</div>
 </div>
 </div>
 </div>
