@@ -36,6 +36,8 @@ class Record(models.Model):
     class Meta:
         verbose_name='Публикация'
         verbose_name_plural='Публикации'
+    def __str__(self):
+        return self.title
 
 class Photo(models.Model):
     file = models.ImageField(upload_to=settings.MEDIA_ROOT)
@@ -44,6 +46,8 @@ class Photo(models.Model):
     class Meta:
         verbose_name='Фото'
         verbose_name_plural='Фото'
+    def __str__(self):
+        return f'К записи {self.record.pk}'
 
 class Comment(models.Model):
     username = models.CharField(max_length=100,default='Гость')
@@ -54,3 +58,5 @@ class Comment(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     parent = models.ForeignKey('self',on_delete=models.CASCADE
                                 ,null=True,blank=True,related_name='replies')
+    def __str__(self):
+        return f'К записи {self.record.pk}'

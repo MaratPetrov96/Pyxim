@@ -50,8 +50,10 @@ form_.hidden = true;
 }
 }
 </script>
+{% block scripts %}
+{% endblock %}
 </head>
-<body>
+<body id='main_body'>
 <div id='app'>
 <nav align='center' id='nav'>
 <div class='nav_center'>
@@ -65,6 +67,10 @@ form_.hidden = true;
 </div>
 {% if user.is_authenticated %}
 <span>{{user.username}}</span>
+{% if user.is_superuser %}
+<a href='{% url "add" %}'>Добавить запись</a>
+<a href='/admin'>Админ</a>
+{% endif %}
 <a href="{% url 'logout' %}" id='logout' align='right'>Выход</a>
 {% else %}
 <span onclick="log()">Вход</span>
@@ -88,7 +94,7 @@ form_.hidden = true;
 {% for r in fresh %}
 <div class='review-title'>
 <a href='{% url "record" r.link r.pk %}'>
-<img src="{{ r.photos.first.file.url }}" width='304' height='148'>
+<img src="{{ r.photos.first.file.url }}" width='246' height='148'>
 <span class='preview-title'>{{ r.title }}</span>
 </a>
 </div>

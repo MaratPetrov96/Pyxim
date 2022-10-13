@@ -13,5 +13,8 @@ urlpatterns = [
     path('#',views.load_more,name='load'),
     path('login',views.Login,name='login'),
     path('sign',views.sign,name='sign'),
-    path('logout',views.Logout,name='logout')
+    path('logout',views.Logout,name='logout'),
+    path('load_tag/<int:tag>',views.load_tag,name='load_tag'),
+    path('load_cat/<int:cat>',views.load_category,name='load_cat'),
+    path('com<int:pk>',views.reply,name='reply')
     ]

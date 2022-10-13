@@ -9,7 +9,8 @@
 </a>
 {% endfor %}
 </div>
-            <button type="button" class="element" onclick='loadmorePost()' id='button'>ЗАГРУЗИТЬ ЕЩЁ</button>
+{% if more %}
+<button type="button" class="element" onclick='loadmorePost()' id='button'>ЗАГРУЗИТЬ ЕЩЁ</button>
 <script>
     const loadBtn = document.getElementById('button');
 
@@ -19,7 +20,7 @@
         var _current_item = $('.review').length;
         const content_container = document.getElementById("content");
         $.ajax({
-            url: '{% url "load" %}',
+            url: '{{url_}}',
             type: 'GET',
             data: {
                  'loaded_item': _current_item
@@ -28,7 +29,7 @@
                 const data = response.posts;
 				console.log(data);
                 data.map(post => {
-					var link = `/<${post.link}>-id${post.id}`;
+					var link = `/${post.link}-id${post.id}`;
 					var prev = `${post.photo}`;
                     content_container.innerHTML += `<a href='${link}' class='review'><img src='${prev}' width='350' height='356'>`+
 														`<span class='category'>${post.category}</span>`+`<span class='record-title' align='center'>${post.title}</span></a>`;
@@ -41,4 +42,5 @@
         );
 }			
     </script>
+{% endif %}
 {% endblock %}
