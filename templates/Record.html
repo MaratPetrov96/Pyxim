@@ -1,0 +1,195 @@
+{% extends 'Base.html' %}
+{% block scripts %}
+<script>
+  function commFunc() {
+              // создаем AJAX-вызов
+              $.ajax({
+                  data: $(this).serialize(), // получаем данные формы
+                  type: $(this).attr('method'), // GET или POST
+                  url: $(this).attr('action'),
+                  // если успешно, то
+                  success: function (response) {
+				  date = new Date(response[0].fields.date);
+				  var comm = document.getElementById("comms");
+				  var comm_day = date.toLocaleDateString();
+				  var comm_hour = date.getHours();
+				  var comm_minute = date.getMinutes();
+				  if (comm_minute<10){
+				  comm_minute = "0" + comm_minute;
+				  }
+				  var comm_main = document.createElement("div");
+				  comm_main.setAttribute('class','comment');
+				  comm_main.setAttribute('align','left');
+				  comm_main.setAttribute('id',response[0].pk);
+				  var comm_date = document.createElement("div");
+				  comm_date.innerHTML += "<span class='username'>"+response[0].fields.username+'</span>';
+				  comm_date.innerHTML += "<span class='comm-date'>"+`${comm_hour}:${comm_minute} ${comm_day}`+'</span>';
+				  var comm_content = document.createElement("div");
+				  comm_content.setAttribute('class','comm-content');
+				  var content = '<p>'+response[0].fields.content.replace('\r\n','</p><p>')+'</p>';
+				  comm_content.innerHTML += content;
+				  comm_main.appendChild(comm_date);
+				  comm_main.appendChild(comm_content);
+				  comm_main.innerHTML += '<span onclick="replyForm(this)">Ответить</span>';
+				  comm.appendChild(comm_main);
+                  },
+              });
+              return false;
+          }
+	function replyFunc(){
+              // создаем AJAX-вызов
+              $.ajax({
+                  data: $(this).serialize(), // получаем данные формы
+                  type: $(this).attr('method'), // GET или POST
+                  url: $(this).attr('action'),
+                  // если успешно, то
+                  success: function (response) {
+				  var parent = document.getElementById($(this).attr('name'));
+				  date = new Date(response[0].fields.date);
+				  var comm_day = date.toLocaleDateString();
+				  var comm_hour = date.getHours();
+				  var comm_minute = date.getMinutes();
+				  if (comm_minute<10){
+				  comm_minute = "0" + comm_minute;
+				  }
+				  var comm_main = document.createElement("div");
+				  comm_main.setAttribute('class','comment_reply');
+				  comm_main.setAttribute('align','left');
+				  comm_main.setAttribute('id',response[0].pk);
+				  var comm_date = document.createElement("div");
+				  comm_date.innerHTML += "<span class='username'>"+response[0].fields.username+'</span>';
+				  comm_date.innerHTML += "<span class='comm-date'>"+`${comm_hour}:${comm_minute} ${comm_day}`+'</span>';
+				  var comm_content = document.createElement("div");
+				  comm_content.setAttribute('class','comm-content');
+				  var content = '<p>'+response[0].fields.content.replace('\r\n','</p><p>')+'</p>';
+				  comm_content.innerHTML += content;
+				  comm_main.appendChild(comm_date);
+				  comm_main.appendChild(comm_content);
+				  comm_main.innerHTML += '<span onclick="replyForm(this)">Ответить</span>';
+				  parent.appendChild(comm_main);
+                  },
+              });
+              return false;
+          }
+</script>
+<script>
+function replyForm(arg){
+var check = document.getElementById("reply");
+if (check == null){
+var parent = arg.parentElement.attributes['id'].value;
+var parentInput = document.createElement('input');
+parentInput.setAttribute('type','hidden');
+parentInput.setAttribute('name','parent');
+parentInput.setAttribute('value',parent);
+var form = document.createElement('form');
+form.setAttribute('action','/com'+parent);
+form.setAttribute('method','POST');
+form.setAttribute('name',parent);
+form.setAttribute('id','reply');
+//console.dir(arg.parentElement);
+//console.log(arg.parentElement.attributes['name'].value);
+var submit = document.createElement('input');
+submit.setAttribute('type','submit');
+submit.setAttribute('class','username_field');
+submit.setAttribute('value','Отправить');
+submit.setAttribute('onclick','replyFunc()');
+var csrf = '{% csrf_token %}';
+form.innerHTML += csrf;
+{% if user.is_authenticated %}
+form.innerHTML += '<div class="username_field"><span>{{user.username}}</span></div>';
+{% else %}
+form.innerHTML += '<div class="username_field"><input type="text" name="username" placeholder="Гость"></div>';
+{% endif %}
+var textarea = document.createElement('textarea');
+textarea.setAttribute('class','comment_form');
+textarea.setAttribute('name','text');
+textarea.setAttribute('maxlength','20000');
+textarea.setAttribute('required',true);
+form.appendChild(parentInput);
+form.appendChild(textarea);
+form.appendChild(submit);
+arg.parentElement.appendChild(form);
+}
+else{
+check.remove();
+}
+}
+</script>
+{% endblock %}
+{% block main %}
+<div class='record' align='left'>
+<a href="{% url 'category' record.category.link  %}" class='category'>{{record.category.title}}</a>
+<div class='title'>
+{{record.title}}
+</div>
+<div class='record-content'>
+{% autoescape off %}
+{{content | linebreaks}}
+{% endautoescape %}
+<p>Автор: {{record.author.username}}</p>
+<div id='tags'>
+<p id='tags-title'>Теги
+<p>
+{% for t in record.tags.all %}
+<span><a href = '{% url "tag" t.link %}'>{{t.title}}</a></span>
+{% endfor %}</p>
+</p>
+</div>
+<div id='comms'>
+<span>Комментарии</span><span>{{ record.comms.all | length }}</span>
+<form method='POST' action='{% url "comment" record.pk %}' id='comm_form' align='left'>
+{% csrf_token %}
+<div>
+<span align='left'>
+{% if not user.is_authenticated %}
+Гость
+{% else %}
+{{user.username}}
+{% endif %}
+</span>
+</div>
+<textarea name='text' maxlength='20000' class='comment_form' required></textarea>
+<div class="username_field">
+<input type='submit' value='Отправить'>
+{% if not user.is_authenticated %}
+<span>под именем</span>
+<input type='text' name='username' placeholder='Гость'>
+{% endif %}
+</div>
+</form>
+{% for c in comms %}
+<div class='comment' align='left' id='{{c.pk}}'>
+<div>
+<span class='username'>{{c.username}}</span>
+<span class='comm-date'>{{c.date.time | time:"H:i"}} {{c.date.date | date:"d.m.y"}}</span>
+</div>
+<div class='comm-content'>
+{{c.content | linebreaks}}
+</div>
+<span onclick='replyForm(this)'>Ответить</span><span> {{c.replies.all | length}}</span>
+{% for repl in c.replies.all %}
+<div class='comment_reply' align='left' id='{{repl.pk}}'>
+<div>
+<span class='username'>{{repl.username}}</span>
+<span class='comm-date'>{{repl.date.time | time:"H:i"}} {{repl.date.date | date:"d.m.y"}}</span>
+</div>
+<div class='comm-content'>
+{{repl.content | linebreaks}}
+</div>
+<span onclick='replyForm(this)'>Ответить</span>
+</div>
+{% endfor %}
+</div>
+{% endfor %}
+</div>
+</div>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script>
+      $(document).ready(function () {
+          // отслеживаем событие отправки формы
+          $('#comm_form').submit(commFunc);
+		  $('#reply').submit(replyFunc);
+      });
+  </script>
+{% endblock %}
