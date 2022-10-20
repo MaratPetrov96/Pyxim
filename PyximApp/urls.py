@@ -16,5 +16,9 @@ urlpatterns = [
     path('logout',views.Logout,name='logout'),
     path('load_tag/<int:tag>',views.load_tag,name='load_tag'),
     path('load_cat/<int:cat>',views.load_category,name='load_cat'),
+    path('load_saved',views.load_saved,name='load_saved'),
+    path('saved',views.view_saved,name='view_saved'),
+    path('save<int:record>',views.save,name='save'),
+    path('del<int:record>',views.delete,name='del'),
     path('com<int:pk>',views.reply,name='reply')
     ]

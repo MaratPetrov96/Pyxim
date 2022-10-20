@@ -1,48 +1,36 @@
 {% extends 'Base.html' %}
 {% block scripts %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
-function replyForm(arg){
-var check = document.getElementById("reply");
-if (check == null){
-var parent = arg.parentElement.attributes['id'].value;
-var parentInput = document.createElement('input');
-parentInput.setAttribute('type','hidden');
-parentInput.setAttribute('name','parent');
-parentInput.setAttribute('value',parent);
-var form = document.createElement('form');
-form.setAttribute('id','reply');
-form.setAttribute('action','/com'+parent);
-form.setAttribute('name',parent);
-//console.dir(arg.parentElement);
-//console.log(arg.parentElement.attributes['name'].value);
-form.setAttribute('method','POST');
-var submit = document.createElement('input');
-submit.setAttribute('type','submit');
-submit.setAttribute('class','username_field');
-var csrf = '{% csrf_token %}';
-form.innerHTML += csrf;
-{% if user.is_authenticated %}
-form.innerHTML += '<div class="username_field"><span>{{user.username}}</span></div>';
-{% else %}
-form.innerHTML += '<div class="username_field"><input type="text" name="username" placeholder="Гость"></div>';
-{% endif %}
-var textarea = document.createElement('textarea');
-textarea.setAttribute('class','comment_form');
-textarea.setAttribute('name','text');
-textarea.setAttribute('maxlength','20000');
-textarea.setAttribute('required',true);
-form.appendChild(parentInput);
-form.appendChild(textarea);
-form.appendChild(submit);
-arg.parentElement.appendChild(form);
+function save(){
+$.ajax({
+data: $(this).serialize(), // получаем данные формы
+                  type: $(this).attr('method'), // GET или POST
+                  url: $(this).attr('action'),
+                  // если успешно, то
+                  success: function (response) {
+				  document.getElementById('save_or_delete').setAttribute('value','-');
+				  document.getElementById('save_or_delete').setAttribute('title','Удалить из сохранённого');
+				  document.getElementById('save_or_delete').setAttribute('onclick','deleteAjax()');
+				  document.getElementById('save').setAttribute('action','del'+response[0].pk);
+				  }
+});
+return false;
 }
-else{
-check.remove();
+function delete_record(){
+$.ajax({
+data: $(this).serialize(), // получаем данные формы
+                  type: $(this).attr('method'), // GET или POST
+                  url: $(this).attr('action'),
+				  success: function (response) {
+				  document.getElementById('save_or_delete').setAttribute('value','+');
+				  document.getElementById('save_or_delete').setAttribute('title','Сохранить');
+				  document.getElementById('save_or_delete').setAttribute('onclick','saveAjax()');
+				  document.getElementById('save').setAttribute('action','save'+response[0].pk);
+				  }
+});
+return false;
 }
-}
-</script>
-<script>
-const comm = document.getElementById("comms");
   function commFunc() {
               // создаем AJAX-вызов
               $.ajax({
@@ -51,7 +39,10 @@ const comm = document.getElementById("comms");
                   url: $(this).attr('action'),
                   // если успешно, то
                   success: function (response) {
+				  document.getElementById('length').innerHTML = Number(document.getElementById('length').innerHTML) + 1; //изменение кол-ва комментариев
+				  //дата и время создания комментария
 				  date = new Date(response[0].fields.date);
+				  var comm = document.getElementById("comms");
 				  var comm_day = date.toLocaleDateString();
 				  var comm_hour = date.getHours();
 				  var comm_minute = date.getMinutes();
@@ -73,6 +64,7 @@ const comm = document.getElementById("comms");
 				  comm_main.appendChild(comm_content);
 				  comm_main.innerHTML += '<span onclick="replyForm(this)">Ответить</span>';
 				  comm.appendChild(comm_main);
+				  document.getElementById('comm_form').remove();
                   },
               });
               return false;
@@ -82,10 +74,13 @@ const comm = document.getElementById("comms");
               $.ajax({
                   data: $(this).serialize(), // получаем данные формы
                   type: $(this).attr('method'), // GET или POST
-                  url: "/com"+$(this).attr('name'),
+                  url: $(this).attr('action'),
                   // если успешно, то
                   success: function (response) {
-				  var parent = document.getElementById($(this).attr('name'));
+				  document.getElementById('length').innerHTML = Number(document.getElementById('length').innerHTML) + 1; //изменение кол-ва комментариев
+				  var par_id = response[0].fields.main_parent
+				  var parent = document.getElementById(par_id); //основной комментарий
+				  document.getElementById('comment'+par_id).innerHTML = Number(document.getElementById('comment'+par_id).innerHTML) + 1; //изменение кол-ва ответов
 				  date = new Date(response[0].fields.date);
 				  var comm_day = date.toLocaleDateString();
 				  var comm_hour = date.getHours();
@@ -93,7 +88,14 @@ const comm = document.getElementById("comms");
 				  if (comm_minute<10){
 				  comm_minute = "0" + comm_minute;
 				  }
+				  //дата и время создания комментария
 				  var comm_main = document.createElement("div");
+				  if (response.length == 2){ //если комментарий является ответом на ответ
+				  var repl = document.createElement('div');
+				  repl.setAttribute('class','parent');
+				  repl.innerHTML += '<span class="username">'+response[1].fields.username+'</span><p>'+response[1].fields.content.replace('\r\n','</p><p>')+'</p>';
+				  comm_main.appendChild(repl);
+				  }
 				  comm_main.setAttribute('class','comment_reply');
 				  comm_main.setAttribute('align','left');
 				  comm_main.setAttribute('id',response[0].pk);
@@ -106,15 +108,73 @@ const comm = document.getElementById("comms");
 				  comm_content.innerHTML += content;
 				  comm_main.appendChild(comm_date);
 				  comm_main.appendChild(comm_content);
-				  comm_main.innerHTML += '<span onclick="replyForm(this)">Ответить</span>';
+				  comm_main.innerHTML += '<div class="comm-bottom"><span onclick="replyForm(this)" name="reply">Ответить</span></div>';
 				  parent.appendChild(comm_main);
+				  document.getElementById('reply').remove();
                   },
-				  error: function(response) {
-        console.log("error");
-      }
               });
               return false;
           }
+</script>
+<script>
+function replyForm(arg){
+var check = document.getElementById("reply"); //существует ли форма уже
+if (check == null){
+var parent = arg.parentElement.parentElement.attributes['id'].value;
+var parentInput = document.createElement('input'); //id родительского комментария, для ajax
+parentInput.setAttribute('type','hidden');
+parentInput.setAttribute('name','parent');
+parentInput.setAttribute('value',parent);
+var form = document.createElement('form');
+form.setAttribute('action','/com'+parent);
+form.setAttribute('method','POST');
+form.setAttribute('name',parent);
+form.setAttribute('id','reply');
+var submit = document.createElement('input');
+submit.setAttribute('type','submit');
+submit.setAttribute('class','username_field');
+submit.setAttribute('value','Отправить');
+submit.setAttribute('onclick','replyAjax()');
+var csrf = '{% csrf_token %}';
+form.innerHTML += csrf;
+{% if user.is_authenticated %}
+form.innerHTML += '<div class="username_field"><span>{{user.username}}</span></div>';
+{% else %}
+form.innerHTML += '<div class="username_field"><input type="text" name="username" placeholder="Гость"></div>';
+{% endif %}
+var textarea = document.createElement('textarea');
+textarea.setAttribute('class','comment_form');
+textarea.setAttribute('name','text');
+textarea.setAttribute('maxlength','20000');
+textarea.setAttribute('required',true);
+if (arg.attributes['name'].value == 'reply'){
+submit.setAttribute('onclick','replyToReply()');
+}
+form.appendChild(parentInput);
+form.appendChild(textarea);
+form.appendChild(submit);
+arg.parentElement.appendChild(form);
+}
+else{
+check.remove();
+}
+}
+//функции, запускающие ajax
+function replyAjax(){
+$('#reply').submit(replyFunc);
+}
+function replyToReply(){
+$('#reply').submit(replyFunc);
+}
+function commentAjax(){
+$('#comm_form').submit(commFunc);
+}
+function saveAjax(){
+$('#save').submit(save);
+}
+function deleteAjax(){
+$('#save').submit(delete_record);
+}
 </script>
 {% endblock %}
 {% block main %}
@@ -122,6 +182,19 @@ const comm = document.getElementById("comms");
 <a href="{% url 'category' record.category.link  %}" class='category'>{{record.category.title}}</a>
 <div class='title'>
 {{record.title}}
+{% if user.is_authenticated %}
+{% if record not in user.profile.saved.all %}
+<form action='{% url "save" record.pk %}' method='POST' id='save'>
+{% csrf_token %}
+<input type='submit' onclick='saveAjax()' value='+' id='save_or_delete' title='Сохранить'>
+</form>
+{% else %}
+<form action='{% url "del" record.pk %}' method='POST' id='save'>
+{% csrf_token %}
+<input type='submit' onclick='deleteAjax()' value='-' id='save_or_delete' title='Удалить из сохранённого'>
+</form>
+{% endif %}
+{% endif %}
 </div>
 <div class='record-content'>
 {% autoescape off %}
@@ -137,7 +210,7 @@ const comm = document.getElementById("comms");
 </p>
 </div>
 <div id='comms'>
-<span>Комментарии</span><span>{{ record.comms.all | length }}</span>
+<span>Комментарии</span><span id='length'>{{record.comms.all | length }}</span>
 <form method='POST' action='{% url "comment" record.pk %}' id='comm_form' align='left'>
 {% csrf_token %}
 <div>
@@ -151,14 +224,14 @@ const comm = document.getElementById("comms");
 </div>
 <textarea name='text' maxlength='20000' class='comment_form' required></textarea>
 <div class="username_field">
-<input type='submit' value='Отправить'>
+<input type='submit' value='Отправить' onclick='commentAjax()'>
 {% if not user.is_authenticated %}
 <span>под именем</span>
 <input type='text' name='username' placeholder='Гость'>
 {% endif %}
 </div>
 </form>
-{% for c in record.comms.all %}
+{% for c in comms %}
 <div class='comment' align='left' id='{{c.pk}}'>
 <div>
 <span class='username'>{{c.username}}</span>
@@ -167,18 +240,32 @@ const comm = document.getElementById("comms");
 <div class='comm-content'>
 {{c.content | linebreaks}}
 </div>
-<span onclick='replyForm(this)'>Ответить</span>
+<div class='comm-bottom'>
+<span onclick='replyForm(this)' name='comment'>Ответить</span><span id='comment{{c.pk}}'> {{c.all_replies.all | length}}</span>
+</div>
+{% for repl in c.all_replies.all %}
+<div class='comment_reply' align='left' id='{{repl.pk}}'>
+<div>
+<span class='username'>{{repl.username}}</span>
+{% if repl.parent %}
+<div class='parent'>
+<span class='username'>{{repl.parent.username}}</span>
+{{repl.parent.content | linebreaks}}
+</div>
+{% endif %}
+<span class='comm-date'>{{repl.date.time | time:"H:i"}} {{repl.date.date | date:"d.m.y"}}</span>
+</div>
+<div class='comm-content'>
+{{repl.content | linebreaks}}
+</div>
+<div class='comm-bottom'>
+<span onclick='replyForm(this)' name='reply'>Ответить</span>
+</div>
+</div>
+{% endfor %}
 </div>
 {% endfor %}
 </div>
 </div>
 </div>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script>
-      $(document).ready(function () {
-          // отслеживаем событие отправки формы
-          $('#comm_form').submit(commFunc);
-		  $('#reply').submit(replyFunc);
-      });
-  </script>
 {% endblock %}

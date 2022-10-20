@@ -18,7 +18,7 @@ from django.core.files import File
 from urllib.request import urlopen
 from tempfile import NamedTemporaryFile
 import os
-from django.core.files.uploadedfile import InMemoryUploadedFile
+import json
 
 
 width = 560 #ширина картинок в записях
@@ -35,17 +35,17 @@ def fresh(record=None): #показ свежего в шапке сайта
     return fresh[-4:]
 
 def pyxim(request,template,data): #шаблонизация
-    data['fresh'] = fresh()
+    data['fresh'] = fresh() #свежие записи в шапке сайта
     data['categories'] = Category.objects.all()
     data['user'] = request.user
     data['sign_form'] = UserCreationForm
     data['login_form'] = AuthenticationForm
     return render(request,template,data)
 
-def load_more(request):
+def load_more(request): #загрузка превью записей на главной странице
     loaded_item = int(request.GET.get('loaded_item'))
     limit = 3
-    all_ = Record.objects.all().order_by('-date')
+    all_ = Record.objects.all().order_by('-pk')
     params = [(i.photos.first().file.url,i.category.title) for i in list(all_)[loaded_item:loaded_item+limit]]
     post_obj = list(all_.values()[loaded_item:loaded_item+limit])
     try:
@@ -60,10 +60,28 @@ def load_more(request):
     data = {'posts': post_obj,'index':index}
     return JsonResponse(data=data)
 
-def load_tag(request,tag):
+def load_tag(request,tag): #загрузка превью записей при просмотре тега
     loaded_item = int(request.GET.get('loaded_item'))
     limit = 3
-    all_ = Tag.objects.get(title=tag).records.all().order_by('-date')
+    all_ = Tag.objects.get(title=tag).records.all().order_by('-pk')
+    params = [(i.photos.first().file.url,i.category.title) for i in list(all_)[loaded_item:loaded_item+limit]]
+    post_obj = list(all_.values()[loaded_item:loaded_item+limit])
+    try:
+        all_[loaded_item+limit]
+    except IndexError:
+        index = False
+    else:
+        index = True #для создания или удаления кнопки "Загузить ещё"
+    for n,p in enumerate(post_obj):
+        post_obj[n]['photo'] = params[n][0]
+        post_obj[n]['category'] = params[n][1]
+    data = {'posts': post_obj,'index':index}
+    return JsonResponse(data=data)
+
+def load_category(request,cat): #загрузка превью записей при просмотре категории
+    loaded_item = int(request.GET.get('loaded_item'))
+    limit = 3
+    all_ = Category.objects.get(pk=cat).records.all().order_by('-pk')
     params = [(i.photos.first().file.url,i.category.title) for i in list(all_)[loaded_item:loaded_item+limit]]
     post_obj = list(all_.values()[loaded_item:loaded_item+limit])
     try:
@@ -78,10 +96,11 @@ def load_tag(request,tag):
     data = {'posts': post_obj,'index':index}
     return JsonResponse(data=data)
 
-def load_category(request,cat):
+@login_required
+def load_saved(request):
     loaded_item = int(request.GET.get('loaded_item'))
     limit = 3
-    all_ = Category.objects.get(pk=cat).records.all().order_by('-date')
+    all_ = request.user.profile.saved.all().order_by('-pk')
     params = [(i.photos.first().file.url,i.category.title) for i in list(all_)[loaded_item:loaded_item+limit]]
     post_obj = list(all_.values()[loaded_item:loaded_item+limit])
     try:
@@ -97,7 +116,7 @@ def load_category(request,cat):
     return JsonResponse(data=data)
 
 def main(request): #главная страница
-    data = Paginator(Record.objects.all().order_by('-date'),3)
+    data = Paginator(Record.objects.all().order_by('-pk'),3)
     more = False
     if data.num_pages != 1:
         more = True
@@ -122,28 +141,29 @@ def add(request): #добавление записи
             count = 0
             for i in html.findAll('div'):
                 if 'class' in i.attrs:
-                    if i.attrs['class'] == ['editor']:
+                    if i.attrs['class'] == ['editor']: #текст
                         text.append('\r\n'.join(list(i.stripped_strings)[:-1]))
-                        for img in i.findAll('img'):
+                        for img in i.findAll('img'): #вставленные изображения
                             text.append('<img src>')
-                    elif i.attrs['class'] == ['editor','img']:
+                    elif i.attrs['class'] == ['editor','img']: #загруженные изображения
                         text.append('<img src>')
-            new = Record(title=title,link=slugify(title),content='\r\n'.join(text),
+            new = Record(title=title,link=slugify(title),content='\r\n\r\n'.join(text),
                          category=Category.objects.get(pk=request.POST['category']),
                          author=request.user)
             new.save()
             for img in html.findAll('img'):
                 if img.findParent().get('class') == ['editor']:
-                    name = uuid4()
+                    name = uuid4() #генерация имени
                     filename = f'Pyxim/temp/{name}.jpg'
-                    with open(filename,'wb') as wb:
+                    with open(filename,'wb') as wb: #создание временного файла при сохранении изображения
                         wb.write(urlopen(img.get('src')).read())
                     file = Photo(record=new)
-                    with open(filename,'rb') as read:
+                    with open(filename,'rb') as read: #сохранение вставленного изображения
                         file.file.save(f'{name}.jpg',File(read))
                         file.save()
-                    os.remove(filename)
+                    os.remove(filename) #удаление врЕменного файла
                 else:
+                    #сохранение изображения, загруженного с устройства
                     file = Photo(file=images[count],record=new,description=request.POST.getlist('descr')[count])
                     file.save()
                     count += 1
@@ -163,11 +183,13 @@ class RecordView(DetailView):
         context['title'] = self.object.title
         context['categories'] = Category.objects.all()
         context['fresh'] = fresh(self.object)
-        context['comms'] = self.object.comms.filter(models.Q(parent=None))
+        context['comms'] = self.object.comms.filter(models.Q(main_parent=None))
         text = self.object.content
         for n,i in enumerate(self.object.photos.all()): #заменяем <img src> на изображения
             text = text.replace('<img src>',f'<div><img src={i.file.url} width={width} height={height} name="{i.pk}"><p>{i.description}</p></div>',1)
         context['content'] = text
+        context['sign_form'] = UserCreationForm
+        context['login_form'] = AuthenticationForm
         return context
 
     def get_object(self, **kwargs):
@@ -176,10 +198,11 @@ class RecordView(DetailView):
         except Record.DoesNotExist:
             raise Http404
 
-class RecordsPage(DetailView):
+class RecordsPage(DetailView): #для генерации списков записей
+    template_name = 'Records.html'
     def context_data(self,context,url):
-        data = Paginator(self.object.records.all().order_by('-date'),4)
-        more = False
+        data = Paginator(self.object.records.all().order_by('-pk'),4)
+        more = False #есть ли записи для дополнительной загрузки
         if data.num_pages != 1:
             more = True
         context['more'] = more
@@ -189,11 +212,12 @@ class RecordsPage(DetailView):
         context['fresh'] = fresh()
         context['user'] = self.request.user
         context['url_'] = reverse(url, args=(self.object.pk,))
+        context['sign_form'] = UserCreationForm
+        context['login_form'] = AuthenticationForm
         return context
 
 class TagView(RecordsPage):
     model = Tag
-    template_name = 'Records.html'
     context_name_object = 'tag'
     def get_context_data(self,**kwargs):
         context = super().get_context_data(**kwargs)
@@ -204,7 +228,6 @@ class TagView(RecordsPage):
 
 class CategoryView(RecordsPage):
     model = Category
-    template_name = 'Records.html'
     context_name_object = 'category'
     def get_context_data(self,**kwargs):
         context = super().get_context_data(**kwargs)
@@ -220,10 +243,10 @@ def sign(request): #авторизация/authorization
         email = request.POST['email']
         User.objects.create_user(username=username, password=password, email=email)
         user = authenticate(username=username, password=password)
+        profile = Profile(user=user)
+        profile.save()
         login(request,user)
-        return redirect('main')
-    form = UserCreationForm()
-    return render(request, 'Sign.html', {'title':'Authorization','sign':form})
+    return redirect('main')
 
 def Login(request): #аутентификация/authentication
     if request.method == 'POST':
@@ -235,14 +258,15 @@ def Login(request): #аутентификация/authentication
             return redirect('main')
     return redirect('main')
 
-def Logout(request):
+def Logout(request): #выход из аккаунта
     logout(request)
     return redirect('main')
 
-@login_required
-def comment(request,pk):
+def comment(request,pk): #комментарий
     if request.POST['text']:
-        '''com = Comment(content=request.POST['text'],record=Record.objects.get(pk=pk))
+        #для теста
+        #com = Comment.objects.get(pk=10)
+        com = Comment(content=request.POST['text'],record=Record.objects.get(pk=pk))
         if request.user.is_authenticated:
             com.user = request.user
             com.username = request.user.username
@@ -251,23 +275,62 @@ def comment(request,pk):
             if request.POST['username']:
                 com.username = request.POST['username']
         com.save()
-        user_json = serializers.serialize("json", [com])'''
-        user_json = serializers.serialize("json", [Comment.objects.get(pk=1)])
+        user_json = serializers.serialize("json", [com])
+        return HttpResponse(user_json, content_type='application/json')
+
+def reply(request,pk): #ответ
+    if request.POST['text']:
+        #для теста
+        #com = Comment.objects.get(pk=13)
+        parent = Comment.objects.get(pk=pk)
+        if parent.main_parent: #проверка, является ли комментарий ответом
+            com = Comment(content=request.POST['text'],record=parent.record,parent=parent,main_parent=parent.main_parent)
+        else:
+            com = Comment(content=request.POST['text'],record=parent.record,main_parent=parent)
+        if request.user.is_authenticated:
+            com.user = request.user
+            com.username = request.user.username
+        else:
+            com.username = 'Гость'
+            if request.POST['username']:
+                com.username = request.POST['username']
+        com.save()
+        data = [com]
+        if parent.parent:
+            data.append(parent)
+        user_json = serializers.serialize("json", data)
         return HttpResponse(user_json, content_type='application/json')
 
 @login_required
-def reply(request,pk):
-    if request.method == 'POST':
-        '''parent = Comment.objects.get(pk=pk)
-        com = Comment(content=request.POST['text'],record=parent.record,parent=parent)
-        if request.user.is_authenticated:
-            com.user = request.user
-            com.username = request.user.username
-        else:
-            com.username = 'Гость'
-            if request.POST['username']:
-                com.username = request.POST['username']
-        com.save()
-        user_json = serializers.serialize("json", [com])'''
-        user_json = serializers.serialize("json", [Comment.objects.get(pk=int(request.POST['parent']))])
-        return HttpResponse(user_json, content_type='application/json')
+def save(request,record): #сохранение записи в профиль
+    request.user.profile.saved.add(
+        Record.objects.get(pk=record))
+    response = [{"pk":record}]
+    data = json.dumps(response)
+    return HttpResponse(data, content_type='application/json')
+
+@login_required
+def delete(request,record): #удаление записи из профиля
+    request.user.profile.saved.remove(
+        Record.objects.get(pk=record))
+    response = [{"pk":record}]
+    data = json.dumps(response)
+    return HttpResponse(data, content_type='application/json')
+
+@login_required
+def view_saved(request): #просмотр сохранённого
+    data = Paginator(request.user.profile.saved.all().order_by('-pk'),4)
+    more = False #есть ли записи для дополнительной загрузки
+    if data.num_pages != 1:
+        more = True
+    context = dict()
+    context['more'] = more
+    context['records'] = data.page(1)
+    context['categories'] = Category.objects.all()
+    context['title'] = 'Сохранённое'
+    context['fresh'] = fresh()
+    context['user'] = request.user
+    context['url_'] = reverse('load_saved')
+    context['sign_form'] = UserCreationForm
+    context['login_form'] = AuthenticationForm
+    return pyxim(request,'Records.html',context)

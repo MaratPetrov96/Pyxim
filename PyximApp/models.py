@@ -58,5 +58,11 @@ class Comment(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     parent = models.ForeignKey('self',on_delete=models.CASCADE
                                 ,null=True,blank=True,related_name='replies')
+    main_parent = models.ForeignKey('self',on_delete=models.CASCADE
+                                ,null=True,blank=True,related_name='all_replies')
     def __str__(self):
-        return f'К записи {self.record.pk}'
+        return f'{self.content} (К записи {self.record.pk})'
+
+class Profile(models.Model):
+    user = models.OneToOneField(User,on_delete=models.CASCADE,related_name='profile')
+    saved = models.ManyToManyField(Record,related_name='saved',blank=True)

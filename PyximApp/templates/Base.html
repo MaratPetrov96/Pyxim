@@ -65,8 +65,10 @@ form_.hidden = true;
 <a href={% url 'category' c.link %} class='catg'>{{c.title}}</a>
 {% endfor %}
 </div>
+<div id='user_panel'>
 {% if user.is_authenticated %}
 <span>{{user.username}}</span>
+<a href='{% url "view_saved" %}' id='save_link'>Сохранённое</a>
 {% if user.is_superuser %}
 <a href='{% url "add" %}'>Добавить запись</a>
 <a href='/admin'>Админ</a>
@@ -76,6 +78,7 @@ form_.hidden = true;
 <span onclick="log()">Вход</span>
 <span onclick="sign()">Регистрация</span>
 {% endif %}
+</div>
 </div>
 <div align="center">
 <form id="form" class='form' method="POST" hidden>
