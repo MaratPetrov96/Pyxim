@@ -64,6 +64,11 @@ form_.hidden = true;
 {% for c in categories %}
 <a href={% url 'category' c.link %} class='catg'>{{c.title}}</a>
 {% endfor %}
+<form action='{% url "search" %}'method='POST' id='search'>
+{% csrf_token %}
+<input type='text' name='query'>
+<input type='submit' value='Поиск'>
+</form>
 </div>
 <div id='user_panel'>
 {% if user.is_authenticated %}

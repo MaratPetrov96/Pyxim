@@ -143,9 +143,9 @@ def add(request): #добавление записи
                 if 'class' in i.attrs:
                     if i.attrs['class'] == ['editor']: #текст
                         text.append('\r\n'.join(list(i.stripped_strings)[:-1]))
-                        for img in i.findAll('img'): #вставленные изображения
+                        for img in i.findAll('img'): #вставленные изображения, не могут быть прокомментированы
                             text.append('<img src>')
-                    elif i.attrs['class'] == ['editor','img']: #загруженные изображения
+                    elif i.attrs['class'] == ['editor','img']: #загруженные изображения, могут быть прокомментированы
                         text.append('<img src>')
             new = Record(title=title,link=slugify(title),content='\r\n\r\n'.join(text),
                          category=Category.objects.get(pk=request.POST['category']),
@@ -326,11 +326,39 @@ def view_saved(request): #просмотр сохранённого
     context = dict()
     context['more'] = more
     context['records'] = data.page(1)
-    context['categories'] = Category.objects.all()
     context['title'] = 'Сохранённое'
-    context['fresh'] = fresh()
-    context['user'] = request.user
     context['url_'] = reverse('load_saved')
-    context['sign_form'] = UserCreationForm
-    context['login_form'] = AuthenticationForm
     return pyxim(request,'Records.html',context)
+
+def search(request):
+    return redirect('search_res',query=request.POST['query'])
+
+def search_res(request,query):
+    data = Paginator(Record.objects.filter(title__contains=query).order_by('-pk'),4)
+    more = False #есть ли записи для дополнительной загрузки
+    if data.num_pages != 1:
+        more = True
+    context = dict()
+    context['more'] = more
+    context['records'] = data.page(1)
+    context['title'] = f'Поиск по запросу "{query}"'
+    context['url_'] = reverse('load_search',kwargs={'query':query})
+    return pyxim(request,'Records.html',context)
+
+def load_search(request,query):
+    loaded_item = int(request.GET.get('loaded_item'))
+    limit = 3
+    all_ = Record.objects.filter(title_text__search=query).order_by('-pk')
+    params = [(i.photos.first().file.url,i.category.title) for i in list(all_)[loaded_item:loaded_item+limit]]
+    post_obj = list(all_.values()[loaded_item:loaded_item+limit])
+    try:
+        all_[loaded_item+limit]
+    except IndexError:
+        index = False
+    else:
+        index = True
+    for n,p in enumerate(post_obj):
+        post_obj[n]['photo'] = params[n][0]
+        post_obj[n]['category'] = params[n][1]
+    data = {'posts': post_obj,'index':index}
+    return JsonResponse(data=data)

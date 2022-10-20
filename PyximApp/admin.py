@@ -6,13 +6,23 @@ admin.site.register(Tag)
 admin.site.register(Record)
 admin.site.register(Photo)
 
+try:
+    admin.site.register(Tag)
+except:
+    pass
+
 class Post(admin.TabularInline):
     model = Record.tags.through
     extra = 3
 
 try:
+    #@admin.register(Record)
     class OfferAdmin(admin.ModelAdmin):
         inlines = (Post,)
         exclude = ('tags',)
 except:
     pass
+
+class PersonAdmin(admin.ModelAdmin):
+    list_filter = ('username', 'date')
+#admin.site.register(Comment,PersonAdmin)

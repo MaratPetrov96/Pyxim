@@ -146,14 +146,16 @@ function new_string(e) {
 <div id='new_record' align='center'>
 <div class='block_' id='del'>
 </div>
-<form id='form_' action='{% url "add" %}' method='POST' enctype='multipart/form-data' class='block_'>
+<form id='form_' action='{% url "add" %}' method='POST' enctype='multipart/form-data'>
 {% csrf_token %}
+<label>Категория записи</label>
 <select name='category' required>
 {% for cat in categories %}
 <option value={{cat.pk}}>{{cat.title}}</option>
 {% endfor %}
 </select>
 <div id='select'>
+<label>Теги</label>
 <select id='select_tag'>
 <option value=''>-------</option>
 {% for i in tags %}
@@ -170,8 +172,8 @@ function new_string(e) {
 </div>
 <input type='text' name='title' id='record_title' placeholder='Название записи' required>
 <textarea name='text' id='data' style='display:none;'></textarea>
-<button onclick="send()" type='submit'>Отправить</button>
-<div id='main' style='margin-top:50px;border:3px solid black;width:700px;height:400px;font-size:20px;'>
+<button onclick="send()" type='submit'>Добавить запись</button>
+<div id='main' style='margin-top:15px;border:3px solid black;width:700px;font-size:20px;'>
 <div class='block_' id = "block">
 <span onclick='add_image()'>Добавить картинку</span>
 <span onclick='add_text()'>Добавить текст</span>

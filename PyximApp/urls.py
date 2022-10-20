@@ -20,5 +20,8 @@ urlpatterns = [
     path('saved',views.view_saved,name='view_saved'),
     path('save<int:record>',views.save,name='save'),
     path('del<int:record>',views.delete,name='del'),
-    path('com<int:pk>',views.reply,name='reply')
+    path('com<int:pk>',views.reply,name='reply'),
+    path('search',views.search,name='search'),
+    path('search/<str:query>',views.search_res,name='search_res'),
+    path('load_search/<str:query>',views.load_search,name='load_search')
     ]
