@@ -2,21 +2,24 @@ from django.shortcuts import render,redirect,HttpResponse,Http404
 from django.http import HttpResponseRedirect,JsonResponse
 from django.urls import reverse
 from django.views.generic import DetailView,UpdateView
-from .forms import *
+from django.core import serializers
 from django.core.paginator import Paginator
+from django.core.files import File
+from django.core.files.storage import FileSystemStorage
+from django.contrib.auth import login, authenticate,logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm,AuthenticationForm
+from tempfile import NamedTemporaryFile
+from rest_framework import serializers
+
+from .models import *
+from .forms import *
+
 from transliterate import slugify
 from uuid import uuid4
 from bs4 import BeautifulSoup as bs
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login, authenticate,logout
-from django.core.files.storage import FileSystemStorage
-from .models import *
-from rest_framework import serializers
-from django.core import serializers
-from django.contrib.auth.forms import UserCreationForm,AuthenticationForm
-from django.core.files import File
 from urllib.request import urlopen
-from tempfile import NamedTemporaryFile
+
 import os
 import json
 
@@ -34,7 +37,7 @@ def fresh(record=None): #показ свежего в шапке сайта
         fresh[index] = fresh[0]
     return fresh[-4:]
 
-def pyxim(request,template,data): #шаблонизация
+def template(request,template,data): #шаблонизация
     data['fresh'] = fresh() #свежие записи в шапке сайта
     data['categories'] = Category.objects.all()
     data['user'] = request.user
@@ -48,12 +51,11 @@ def load_more(request): #загрузка превью записей на гл�
     all_ = Record.objects.all().order_by('-pk')
     params = [(i.photos.first().file.url,i.category.title) for i in list(all_)[loaded_item:loaded_item+limit]]
     post_obj = list(all_.values()[loaded_item:loaded_item+limit])
+    index = True
     try:
         all_[loaded_item+limit]
     except IndexError:
         index = False
-    else:
-        index = True
     for n,p in enumerate(post_obj):
         post_obj[n]['photo'] = params[n][0]
         post_obj[n]['category'] = params[n][1]
@@ -103,12 +105,11 @@ def load_saved(request):
     all_ = request.user.profile.saved.all().order_by('-pk')
     params = [(i.photos.first().file.url,i.category.title) for i in list(all_)[loaded_item:loaded_item+limit]]
     post_obj = list(all_.values()[loaded_item:loaded_item+limit])
+    index = True
     try:
         all_[loaded_item+limit]
     except IndexError:
         index = False
-    else:
-        index = True
     for n,p in enumerate(post_obj):
         post_obj[n]['photo'] = params[n][0]
         post_obj[n]['category'] = params[n][1]
@@ -121,7 +122,7 @@ def main(request): #главная страница
     if data.num_pages != 1:
         more = True
     data = data.page(1)
-    return pyxim(request,'Records.html',{'title':'Главная страница','records':data,
+    return template(request,'Records.html',{'title':'Главная страница','records':data,
                                          'url_':reverse('load'),'more':more})
 
 def handler404(request,exception):
@@ -171,7 +172,7 @@ def add(request): #добавление записи
                 for i in tags.split('-')[1:-1]:
                     new.tags.add(Tag.objects.get(pk=int(i)))
             return redirect('record',link=new.link,pk=new.pk)
-        return pyxim(request,'NewRecord.html',{'tags':Tag.objects.all(),'title':'Новая запись'})
+        return template(request,'NewRecord.html',{'tags':Tag.objects.all(),'title':'Новая запись'})
     raise Http404
 
 class RecordView(DetailView):
@@ -328,7 +329,7 @@ def view_saved(request): #просмотр сохранённого
     context['records'] = data.page(1)
     context['title'] = 'Сохранённое'
     context['url_'] = reverse('load_saved')
-    return pyxim(request,'Records.html',context)
+    return template(request,'Records.html',context)
 
 def search(request):
     return redirect('search_res',query=request.POST['query'])
@@ -343,7 +344,7 @@ def search_res(request,query):
     context['records'] = data.page(1)
     context['title'] = f'Поиск по запросу "{query}"'
     context['url_'] = reverse('load_search',kwargs={'query':query})
-    return pyxim(request,'Records.html',context)
+    return template(request,'Records.html',context)
 
 def load_search(request,query):
     loaded_item = int(request.GET.get('loaded_item'))
